@@ -8,6 +8,8 @@ __pycache__/
 
 raw/
 
+Py_DSSATTools/
+
 # Distribution / packaging
 .Python
 build/
