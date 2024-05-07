@@ -2,9 +2,10 @@
 import pandas as pd
 import os
 import re
-from file_formater import Weather_folder
+from file_formater import Weather_folder, INSI
 import geopandas as gpd
 from datetime import datetime
+from DSSATTools import weather
 
 data_path = "D:/315Lab/DATA/TReAD_sub3/"
 wth_variable = ('SRAD', 'TMAX', 'TMIN', 'RAIN')
@@ -31,8 +32,25 @@ class TReAD_filename():
 # Weather folder's object
 weather = Weather_folder(data_path, wth_variable)
 
+# Output file for specific year
 data = weather.read_file(1980)
-print(data)
+
+# Unique grid points
+grid_centroids = data['geometry'].drop_duplicates().reset_index()
+
+####### Test 1 points
+test_points = grid_centroids['geometry'].tolist()
+
+test_point = test_points[0]
+
+# Data to be transformed
+test_data = data.loc[data['geometry'] == test_point,]
+
+test_data.set_index("Date", inplace = True)
+
+df = test_data[['SRAD','TMAX','TMIN','RAIN']]
+
+
 # overlap_points = data.loc[data['Date'] == datetime(1980,1,1),]
 
 # Spatial join (if the points align exactly or are very close, adjust 'op' accordingly, e.g., 'intersects', 'within', etc.)

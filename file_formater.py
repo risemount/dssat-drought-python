@@ -6,6 +6,9 @@ import geopandas as gpd
 from shapely.geometry import Point
 from datetime import date, datetime
 from functools import reduce
+import itertools
+from string import ascii_uppercase as Alphabet
+
 
 # Funciton to read a layer (row)
 def soil_line_read(line, format_list):
@@ -67,6 +70,8 @@ def weather_data(fields):
     fmt = f'A7,{len(fields)}(1X,F5.1)'
     return ff.FortranRecordWriter(fmt).write(fields) + '\n'
 
+
+# Weather folder containing variables
 class Weather_folder():
     """
         TReAD files names and the full names
@@ -83,7 +88,7 @@ class Weather_folder():
         self.vars = weather_var
 
     # Read files for a specific year
-    def read_file(self, year: int) -> dict:
+    def read_file(self, year: int, polygon: bool = False) -> dict:
         # Extract specific year's filenames
         filenames = {v: [fnames for fnames in self.filepaths[v] if fnames.endswith(f'{year}.csv')][0] for v in self.vars}
 
@@ -109,13 +114,15 @@ class Weather_folder():
             )
 
             # Transform to TWD97 coordinate
-            geo_df.to_crs(3826, inplace = True)
+            if polygon:
+                geo_df.to_crs(3826, inplace = True)
 
             # Drop LON and LAT columns.
             geo_df.drop(columns = ['LON', 'LAT'], inplace = True)
 
-            # Buffer
-            geo_df['geometry'] = geo_df.buffer(0.05, cap_style = 'square')
+            # Create Buffer Polygon
+            if polygon:
+                geo_df['geometry'] = geo_df.buffer(0.05, cap_style = 'square')
 
             # Melt data frame into "long table"
             geo_df = pd.melt(geo_df, id_vars = ('geometry'), var_name = 'Date', value_name = v)
@@ -124,17 +131,47 @@ class Weather_folder():
             geo_df['Date'] = pd.to_datetime(geo_df['Date'], format = "%Y%m%d")
 
             # Transform to WGS84 coordinate
-            geo_df.to_crs(4326, inplace = True)
+            if polygon:
+                geo_df.to_crs(4326, inplace = True)
 
             # Save Data Frame as a Key: value dictionary
             data_frames[v] = geo_df
 
-        # # Assuming dfs is a list of DataFrames that all contain a column named 'Key'
-        # df_merged = reduce(lambda left, right: pd.merge(left, right, on = ['geometry', 'Date'], how = 'left'), data_frames.values())
+        # Assuming dfs is a list of DataFrames that all contain a column named 'Key'
+        df_merged = reduce(lambda left, right: pd.merge(left, right, on = ['geometry', 'Date'], how = 'left'), data_frames.values())
 
-        # df_merged.dropna(subset = ['SRAD', 'TMAX', 'TMIN', 'RAIN'], inplace = True)
+        df_merged.dropna(subset = ['SRAD', 'TMAX', 'TMIN', 'RAIN'], inplace = True)
 
 
-        return data_frames
+        return df_merged
 
+class INSI():
+    def __init__(self, lon: float, lat: float, resolution = 0.05) -> str:
+        # Check the resolution
+        if int(lon%resolution) != 0 or int(lat%resolution) != 0:
+            raise ValueError("Incorrect resolution")
+
+        # Define the range of LON and LAT
+        min_lon = 120.0; max_lon = 122.0
+        min_lat = 21.5; max_lat = 25.5
+
+        # Define two letters combinations
+        two_letters = [''.join(i) for i in itertools.product(Alphabet, repeat = 2)]
+
+        # Check range
+        if min_lon <= lon <= max_lon:
+            # Extract letters combination
+            insi_1 = two_letters[int((lon-min_lon)/resolution)]
+        else:
+            raise ValueError("LON out of range")
+
+        # Check range
+        if min_lat <= lat <= max_lat:
+            # Extract letters combination
+            insi_2 = two_letters[int((lat-min_lat)/resolution)]
+        else:
+            raise ValueError("LAT out of range")
+
+        # Return a 4-letter INSI
+        self.insi = insi_1 + insi_2
 
