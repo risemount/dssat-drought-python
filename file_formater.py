@@ -108,8 +108,14 @@ class Weather_folder():
                 crs="EPSG:4326"  # Ensure coordinates are in WGS 84
             )
 
+            # Transform to TWD97 coordinate
+            geo_df.to_crs(3826, inplace = True)
+
             # Drop LON and LAT columns.
             geo_df.drop(columns = ['LON', 'LAT'], inplace = True)
+
+            # Buffer
+            geo_df['geometry'] = geo_df.buffer(0.05, cap_style = 'square')
 
             # Melt data frame into "long table"
             geo_df = pd.melt(geo_df, id_vars = ('geometry'), var_name = 'Date', value_name = v)
@@ -117,10 +123,18 @@ class Weather_folder():
             # Datetime format
             geo_df['Date'] = pd.to_datetime(geo_df['Date'], format = "%Y%m%d")
 
+            # Transform to WGS84 coordinate
+            geo_df.to_crs(4326, inplace = True)
+
             # Save Data Frame as a Key: value dictionary
             data_frames[v] = geo_df
 
-        # Assuming dfs is a list of DataFrames that all contain a column named 'Key'
-        df_merged = reduce(lambda left, right: pd.merge(left, right, on = ['geometry', 'Date'], how = 'left'), data_frames.values())
+        # # Assuming dfs is a list of DataFrames that all contain a column named 'Key'
+        # df_merged = reduce(lambda left, right: pd.merge(left, right, on = ['geometry', 'Date'], how = 'left'), data_frames.values())
 
-        return df
+        # df_merged.dropna(subset = ['SRAD', 'TMAX', 'TMIN', 'RAIN'], inplace = True)
+
+
+        return data_frames
+
+
