@@ -44,7 +44,9 @@ import pandas as pd
 from pandas import DataFrame
 from datetime import datetime
 from pandas import NA, isna
-from DSSATTools.base.formater import weather_data, weather_data_header, weather_station
+from DSSAT_base_formater import weather_data, weather_data_header, weather_station
+from file_formater import INSI
+
 
 PARS_DESC = {
     # Station parameters
@@ -93,7 +95,7 @@ def list_weather_variables():
 class Weather():
     def __init__(self, df:DataFrame, pars:dict, lat:float=None, lon:float=None,
                  elev:float=None, tav:float=None, amp:float=None, co2:float=None,
-                 refht:float=None, wndht:float=None, insi: str = 'WSTA'):
+                 refht:float=None, wndht:float=None):
         '''
         Initialize a Weather instance. This instance contains the weather data,
         as well as the parameters that define the weather station that the data
@@ -124,9 +126,9 @@ class Weather():
             be set to "W" to use this value.
         '''
         self.description = "Weather station"
-        self.INSI = insi
         self.LAT = lat
         self.LON = lon
+        self.INSI = INSI(lon = lon, lat = lat).insi
         self.ELEV = elev
         self.TAV = tav
         self.AMP = amp
@@ -185,7 +187,7 @@ class Weather():
         self._name = f'{self.INSI}{str(first_year)[2:]}{total_years:02d}'
 
 
-    def write(self, folder:str='', **kwargs):
+    def write(self, folder:str = '', **kwargs):
         '''
         Writes the weather files in the provided folder. The name is defined by the dates and the Institute code (INSI).
 
@@ -212,8 +214,8 @@ class Weather():
         ])
         outstr += weather_data_header(self.data.columns)
 
-        df = self.data.applymap(lambda x: f"{x:5.1f}")
-        df['day'] = df.index.strftime("%Y%j")
+        df = self.data.map(lambda x: f"{x:5.1f}")
+        df['day'] = df.index.strftime("%y%j") # two-digit year
         df = df [["day"]+list(self.data.columns)]
         outstr += "\n".join(map(lambda x: " ".join(x), df.values))
 

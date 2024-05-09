@@ -86,6 +86,7 @@ class Weather_folder():
         self.filenames = filenames # Dict: Var(Key): filename(Variables)
         self.filepaths = filepaths # Dict: Var(Key): filepath(Variables)
         self.vars = weather_var
+        self.year_range = year_range
 
     # Read files for a specific year
     def read_file(self, year: int, polygon: bool = False) -> dict:
@@ -144,9 +145,14 @@ class Weather_folder():
 
 
         return df_merged
+    def unique_location(self):
+        data = self.read_file(self.year_range[0])
+        grid_centroids = data['geometry'].drop_duplicates()
+
+        return grid_centroids
 
 class INSI():
-    def __init__(self, lon: float, lat: float, resolution = 0.05) -> str:
+    def __init__(self, lon: float, lat: float, resolution: float = 0.05) -> str:
         # Check the resolution
         if int(lon%resolution) != 0 or int(lat%resolution) != 0:
             raise ValueError("Incorrect resolution")
